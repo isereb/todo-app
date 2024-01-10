@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  CreateActivityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-lambda'
+      CodeUri: .
+      Handler: main.handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          AWS_STACK_NAME: !Ref AWS::StackName
+      Events:
+        TodosAPI:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+      Policies:
+        - Statement:
+            - Sid: TodoAppDynamoAccessExplicitDeny
+              Effect: Deny
+              Action:
+                - dynamodb:CreateTable
+                - dynamodb:DeleteTable
+              Resource:
+                - !GetAtt TodoTable.Arn
+        - Statement:
+            - Sid: TodoAppDynamoAccess
+              Effect: Allow
+              Action:
+                - dynamodb:*
+              Resource:
+                - !GetAtt TodoTable.Arn
+
+  TodoTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-table'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
